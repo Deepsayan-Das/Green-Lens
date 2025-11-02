@@ -1,0 +1,411 @@
+openapi: 3.0.0
+info:
+  title: "🌳 GreenLens API"
+  description: "The main gateway API for the GreenLens microservice architecture. Handles user data, activities, and orchestrates ML and Blockchain services."
+  version: "1.0.0"
+servers:
+  - url: "http://localhost:8000/api/v1"
+    description: "Local Development Server"
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    # --- Error Schemas ---
+    ApiError:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: false
+        message:
+          type: string
+        errors:
+          type: array
+          items:
+            type: string
+    
+    # --- Main Schemas ---
+    UserProfile:
+      type: object
+      properties:
+        fullName:
+          type: string
+        email:
+          type: string
+        avatarUrl:
+          type: string
+        trustLevel:
+          type: number
+        badges:
+          type: array
+          items:
+            type: string
+        address:
+          type: object
+          properties:
+            _id:
+              type: string
+            address:
+              type: string
+            city:
+              type: string
+            state:
+              type: string
+            pinCode:
+              type: string
+            homeType:
+              type: string
+            tenure:
+              type: string
+
+    Dashboard:
+      type: object
+      properties:
+        profile:
+          $ref: '#/components/schemas/UserProfile'
+        totalGreenTokens:
+          type: number
+        currentCarbonFootprint:
+          type: number
+        monthlyStats:
+          type: object
+          properties:
+            kmDriven:
+              type: number
+            elecUnitsLogged:
+              type: number
+        tokenSources:
+          type: object
+          properties:
+            fromPlanting:
+              type: number
+            fromDriving:
+              type: number
+        vehicles:
+          type: array
+          items:
+            type: object # (Short Vehicle Schema)
+
+# --- API Paths ---
+paths:
+  # --- User & Dashboard ---
+  /users/dashboard:
+    get:
+      tags: [User]
+      summary: "Get all data for the /home dashboard"
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: "Dashboard data fetched successfully"
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    $ref: '#/components/schemas/Dashboard'
+        '401':
+          description: "Unauthorized"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '404':
+          description: "User not found"
+
+  /users/profile:
+    patch:
+      tags: [User]
+      summary: "Update user's personal info (Aadhaar, address, etc.)"
+      security:
+        - BearerAuth: []
+      requestBody:
+        description: "Fields to update for the user and their address."
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                fullName:
+                  type: string
+                ph1:
+                  type: string
+                adhaar:
+                  type: string
+                dob:
+                  type: string
+                  format: date
+                gender:
+                  type: string
+                  enum: [Male, Female, Other]
+                address:
+                  type: string
+                city:
+                  type: string
+                state:
+                  type: string
+                pinCode:
+                  type: string
+                homeType:
+                  type: string
+                  enum: [House, Apartment, Bungalow, Other]
+                tenure:
+                  type: string
+                  enum: [Owned, Rented]
+      responses:
+        '200':
+          description: "Profile updated successfully"
+        '400':
+          description: "Bad Request (e.g., validation error)"
+        '401':
+          description: "Unauthorized"
+
+  # --- Submit Forms ---
+  /submit/electricity:
+    post:
+      tags: [Submit]
+      summary: "Submit the electricity form (calls ML)"
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                bill:
+                  type: number
+                month:
+                  type: string
+                  example: "2025-11"
+                unitsUsed:
+                  type: number
+                solarUsed:
+                  type: number
+      responses:
+        '201':
+          description: "Electricity bill logged successfully"
+        '400':
+          description: "Missing required fields"
+
+  /submit/solar:
+    post:
+      tags: [Submit]
+      summary: "Submit the solar panel form"
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                purchaseBill:
+                  type: number
+                modelName:
+                  type: string
+                powerRating:
+                  type: number
+      responses:
+        '201':
+          description: "Solar data logged successfully!"
+
+  /submit/transportation:
+    post:
+      tags: [Submit]
+      summary: "Submit a daily trip (calls ML)"
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                mode:
+                  type: string
+                  enum: [bicycle, walk, "e-bike", "two wheeler", "four wheeler", "public transport"]
+                distance:
+                  type: number
+                isEV:
+                  type: boolean
+      responses:
+        '201':
+          description: "Trip logged successfully!"
+
+  /submit/purchase:
+    post:
+      tags: [Submit]
+      summary: "Submit a green purchase form"
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                itemType:
+                  type: string
+                description:
+                  type: string
+                amount:
+                  type: number
+      responses:
+        '201':
+          description: "Green purchase logged successfully!"
+
+  /submit/plantation:
+    post:
+      tags: [Submit]
+      summary: "Submit the plantation form (hardcoded)"
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                plantImage:
+                  type: string
+                  format: binary
+                plantCount:
+                  type: number
+      responses:
+        '201':
+          description: "Planting logged successfully!"
+
+  # --- Vehicle Routes ---
+  /vehicles/add:
+    post:
+      tags: [Vehicle]
+      summary: "Add a new car/scooter to the user's profile"
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                modelName:
+                  type: string
+                company:
+                  type: string
+                type:
+                  type: string
+                  enum: [Car, Scooter, Motorcycle, E-Bike, Bicycle, Three-Wheeler, Other]
+                isEV:
+                  type: boolean
+      responses:
+        '201':
+          description: "Vehicle added successfully"
+
+  /vehicles/update-odometer:
+    post:
+      tags: [Vehicle]
+      summary: "Update a vehicle's KMs (calls ML)"
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                vehicleID:
+                  type: string
+                newOdometer:
+                  type: number
+      responses:
+        '200':
+          description: "Odometer updated successfully"
+
+  # --- Store & Reward ---
+  /store/redeem:
+    post:
+      tags: [Store]
+      summary: "Redeem an item (calls Blockchain /burn)"
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                productId:
+                  type: string
+                  example: "VOUCHER_500"
+      responses:
+        '200':
+          description: "Item redeemed successfully!"
+        '400':
+          description: "Not enough Green Tokens"
+        '404':
+          description: "Product not found"
+
+  /reward:
+    post:
+      tags: [Store]
+      summary: "Send tokens to a crypto wallet (calls Blockchain /reward)"
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                address:
+                  type: string
+                  example: "0x..."
+                amount:
+                  type: number
+      responses:
+        '200':
+          description: "Reward minted and tokens updated"
+        '400':
+          description: "Not enough tokens or invalid address"
+        '500':
+          description: "Blockchain transaction failed"
+
+  # --- Webhooks (Public) ---
+  /webhooks/clerk:
+    post:
+      tags: [Webhook]
+      summary: "(Public) Clerk webhook for user sync"
+      description: "Secured by Svix signature, not Bearer token."
+      requestBody:
+        description: "Raw JSON payload from Clerk"
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '200':
+          description: "Webhook received"
+        '201':
+          description: "User created"
+        '400':
+          description: "Invalid signature"
