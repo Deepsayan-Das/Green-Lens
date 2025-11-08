@@ -1,29 +1,24 @@
 # GreenLens – Track, Earn, and Give Back to the Planet 🌱
 
-*GreenLens* is an intelligent sustainability platform that helps users understand, track, and reduce their environmental impact. By manually logging daily activities such as travel, energy consumption, and shopping habits, users earn *Green Tokens* for verified eco-friendly actions. Tokens can be redeemed for eco-friendly products or donated to verified NGOs, turning small actions into real-world environmental impact.  
+GreenLens is a smart sustainability platform that helps users track, verify, and reduce their environmental impact. By logging daily activities like travel, energy use, and shopping habits, users earn Green Tokens for verified eco-friendly actions.
 
----
+🌟 Core Features
 
-## 🌟 Features
+Activity Tracking: Log daily habits and upload bills or receipts, auto-processed via Google Cloud Document AI.
 
-- *Track Daily Activities:*  
-  Users manually log travel distance, electricity usage, shopping habits, and solar power generation. Optional bill/receipt uploads are processed using *Google Cloud Document AI* for accurate data extraction.  
+ML Verification: An XGBoost model ensures fair and accurate token distribution.
 
-- *ML-Powered Verification:*  
-  An *XGBoost model* validates submitted activities to ensure fair token assignment.  
+Blockchain Rewards: Verified actions mint Green Tokens on the Sepolia testnet, ensuring transparent tracking.
 
-- *Blockchain Token Management:*  
-  Verified eco-friendly actions trigger *Green Token minting* via a *Solidity smart contract* on the *Sepolia testnet*, providing secure and transparent reward tracking.  
+Redeem or Donate: Use tokens to buy eco-products or donate to verified NGOs — all recorded on-chain.
 
-- *Redeem Tokens:*  
-  Users can redeem tokens for eco-friendly products or donate to verified NGOs. All redemptions are recorded on the blockchain for transparency.  
+AI Assistant: An OpenAI-powered chatbot helps users log actions, answer questions, and suggest greener choices.
 
-- *AI Chatbot Assistance:*  
-  An intelligent chatbot powered by *OpenAI SDK & Generative AI* helps users log activities, answer sustainability questions, and suggest eco-friendly actions.  
+Impact Dashboard: A clean React + TailwindCSS dashboard displays your carbon impact, token balance, and leaderboard rank.
 
-- *Interactive Dashboard:*  
-  Users can track token balance, transaction history, leaderboard ranking, and overall environmental impact through a clean *React + TailwindCSS* interface.  
+💚 Mission
 
+Turning everyday choices into real environmental impact — rewarding sustainability through transparency and technology.
 ---
 
 ## 🛠 Tech Stack
