@@ -1,8 +1,6 @@
 'use client';
 import React, {useState, useEffect} from "react";
 import {products} from "../data/product.js";
-import React, {useState, useEffect} from "react";
-import {products} from "../data/product.js";
 import axios from "axios";
 
 const initialForm = {

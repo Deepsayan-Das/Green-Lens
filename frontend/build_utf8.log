@@ -1,0 +1,320 @@
+﻿
+> greenlens@0.1.0 build
+> next build
+
+node.exe : [baseline-brows
+er-mapping] The data in 
+this module is over two 
+months old.  To ensure 
+accurate Baseline data, 
+please update: `npm i base
+line-browser-mapping@lates
+t -D`
+At line:1 char:1
++ & "C:\Program 
+Files\nodejs/node.exe" "C:
+\Users\ankit\AppData\Roami
+ng\ ...
++ ~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo        
+      : NotSpecified: ([  
+  baseline-brows...ping   
+ @latest -D`:String) [    
+], RemoteException
+    + FullyQualifiedError 
+   Id : NativeCommandErr  
+  or
+ 
+   Γû▓ Next.js 16.0.0 (Turbopack)
+   - Environments: .env.local
+
+   Creating an optimized production build ...
+[baseline-browser-mapping]
+ The data in this module 
+is over two months old.  
+To ensure accurate 
+Baseline data, please 
+update: `npm i baseline-br
+owser-mapping@latest -D`
+/*! ≡ƒî╝ daisyUI 5.3.10 */
+Found 1 warning while 
+optimizing generated CSS:
+
+[2mΓöé }[22m
+[2mΓöé @layer base {[22m
+[2mΓöé[22m   @property 
+--radialprogress {
+[2mΓöå[22m            
+[33m[2m^--[22m Unknown 
+at rule: @property[39m
+[2mΓöå[22m
+[2mΓöé     syntax: 
+"<percentage>";[22m
+[2mΓöé     inherits: 
+true;[22m
+
+
+> Build error occurred
+Error: Turbopack build 
+failed with 4 errors:
+./src/app/redeem/page.js:4
+:8
+Ecmascript file had an 
+error
+[0m [90m 2 |[39m 
+[36mimport[39m [33mReac
+t[39m[33m,[39m 
+{useState[33m,[39m 
+useEffect} [36mfrom[39m 
+[32m"react"[39m[33m;[3
+9m
+ [90m 3 |[39m 
+[36mimport[39m 
+{products} [36mfrom[39m 
+[32m"../data/product.js"
+[39m[33m;[39m
+[31m[1m>[22m[39m[90m 
+4 |[39m [36mimport[39m 
+[33mReact[39m[33m,[39m
+ {useState[33m,[39m 
+useEffect} [36mfrom[39m 
+[32m"react"[39m[33m;[3
+9m
+ [90m   |[39m        [3
+1m[1m^[22m[39m[31m[1m
+^[22m[39m[31m[1m^[22m
+[39m[31m[1m^[22m[39m
+[31m[1m^[22m[39m
+ [90m 5 |[39m 
+[36mimport[39m 
+{products} [36mfrom[39m 
+[32m"../data/product.js"
+[39m[33m;[39m
+ [90m 6 |[39m 
+[36mimport[39m axios 
+[36mfrom[39m [32m"axios
+"[39m[33m;[39m
+ [90m 7 |[39m[0m
+
+the name `React` is 
+defined multiple times
+
+Import traces:
+  Client Component 
+Browser:
+    
+./src/app/redeem/page.js 
+[Client Component Browser]
+    
+./src/app/redeem/page.js 
+[Server Component]
+
+  Client Component SSR:
+    
+./src/app/redeem/page.js 
+[Client Component SSR]
+    
+./src/app/redeem/page.js 
+[Server Component]
+
+
+./src/app/redeem/page.js:5
+:9
+Ecmascript file had an 
+error
+[0m [90m 3 |[39m 
+[36mimport[39m 
+{products} [36mfrom[39m 
+[32m"../data/product.js"
+[39m[33m;[39m
+ [90m 4 |[39m 
+[36mimport[39m [33mReac
+t[39m[33m,[39m 
+{useState[33m,[39m 
+useEffect} [36mfrom[39m 
+[32m"react"[39m[33m;[3
+9m
+[31m[1m>[22m[39m[90m 
+5 |[39m [36mimport[39m 
+{products} [36mfrom[39m 
+[32m"../data/product.js"
+[39m[33m;[39m
+ [90m   |[39m         [
+31m[1m^[22m[39m[31m[1
+m^[22m[39m[31m[1m^[22
+m[39m[31m[1m^[22m[39m
+[31m[1m^[22m[39m[31m
+[1m^[22m[39m[31m[1m^[
+22m[39m[31m[1m^[22m[3
+9m
+ [90m 6 |[39m 
+[36mimport[39m axios 
+[36mfrom[39m [32m"axios
+"[39m[33m;[39m
+ [90m 7 |[39m
+ [90m 8 |[39m 
+[36mconst[39m 
+initialForm [33m=[39m 
+{[0m
+
+the name `products` is 
+defined multiple times
+
+Import traces:
+  Client Component 
+Browser:
+    
+./src/app/redeem/page.js 
+[Client Component Browser]
+    
+./src/app/redeem/page.js 
+[Server Component]
+
+  Client Component SSR:
+    
+./src/app/redeem/page.js 
+[Client Component SSR]
+    
+./src/app/redeem/page.js 
+[Server Component]
+
+
+./src/app/redeem/page.js:4
+:26
+Ecmascript file had an 
+error
+[0m [90m 2 |[39m 
+[36mimport[39m [33mReac
+t[39m[33m,[39m 
+{useState[33m,[39m 
+useEffect} [36mfrom[39m 
+[32m"react"[39m[33m;[3
+9m
+ [90m 3 |[39m 
+[36mimport[39m 
+{products} [36mfrom[39m 
+[32m"../data/product.js"
+[39m[33m;[39m
+[31m[1m>[22m[39m[90m 
+4 |[39m [36mimport[39m 
+[33mReact[39m[33m,[39m
+ {useState[33m,[39m 
+useEffect} [36mfrom[39m 
+[32m"react"[39m[33m;[3
+9m
+ [90m   |[39m           
+               [31m[1m^
+[22m[39m[31m[1m^[22m[
+39m[31m[1m^[22m[39m[3
+1m[1m^[22m[39m[31m[1m
+^[22m[39m[31m[1m^[22m
+[39m[31m[1m^[22m[39m
+[31m[1m^[22m[39m[31m[
+1m^[22m[39m
+ [90m 5 |[39m 
+[36mimport[39m 
+{products} [36mfrom[39m 
+[32m"../data/product.js"
+[39m[33m;[39m
+ [90m 6 |[39m 
+[36mimport[39m axios 
+[36mfrom[39m [32m"axios
+"[39m[33m;[39m
+ [90m 7 |[39m[0m
+
+the name `useEffect` is 
+defined multiple times
+
+Import traces:
+  Client Component 
+Browser:
+    
+./src/app/redeem/page.js 
+[Client Component Browser]
+    
+./src/app/redeem/page.js 
+[Server Component]
+
+  Client Component SSR:
+    
+./src/app/redeem/page.js 
+[Client Component SSR]
+    
+./src/app/redeem/page.js 
+[Server Component]
+
+
+./src/app/redeem/page.js:4
+:16
+Ecmascript file had an 
+error
+[0m [90m 2 |[39m 
+[36mimport[39m [33mReac
+t[39m[33m,[39m 
+{useState[33m,[39m 
+useEffect} [36mfrom[39m 
+[32m"react"[39m[33m;[3
+9m
+ [90m 3 |[39m 
+[36mimport[39m 
+{products} [36mfrom[39m 
+[32m"../data/product.js"
+[39m[33m;[39m
+[31m[1m>[22m[39m[90m 
+4 |[39m [36mimport[39m 
+[33mReact[39m[33m,[39m
+ {useState[33m,[39m 
+useEffect} [36mfrom[39m 
+[32m"react"[39m[33m;[3
+9m
+ [90m   |[39m           
+     [31m[1m^[22m[39m
+[31m[1m^[22m[39m[31m[
+1m^[22m[39m[31m[1m^[2
+2m[39m[31m[1m^[22m[39
+m[31m[1m^[22m[39m[31m
+[1m^[22m[39m[31m[1m^
+[22m[39m
+ [90m 5 |[39m 
+[36mimport[39m 
+{products} [36mfrom[39m 
+[32m"../data/product.js"
+[39m[33m;[39m
+ [90m 6 |[39m 
+[36mimport[39m axios 
+[36mfrom[39m [32m"axios
+"[39m[33m;[39m
+ [90m 7 |[39m[0m
+
+the name `useState` is 
+defined multiple times
+
+Import traces:
+  Client Component 
+Browser:
+    
+./src/app/redeem/page.js 
+[Client Component Browser]
+    
+./src/app/redeem/page.js 
+[Server Component]
+
+  Client Component SSR:
+    
+./src/app/redeem/page.js 
+[Client Component SSR]
+    
+./src/app/redeem/page.js 
+[Server Component]
+
+
+    at <unknown> (./src/ap
+p/redeem/page.js:4:8)
+    at <unknown> (./src/ap
+p/redeem/page.js:5:9)
+    at <unknown> (./src/ap
+p/redeem/page.js:4:26)
+    at <unknown> (./src/ap
+p/redeem/page.js:4:16)
