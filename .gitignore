@@ -38,3 +38,23 @@ dist/
 *.sln
 *.sw?
 Thumbs.db
+
+# Log files (local debug logs, not needed in repo)
+*.log
+*_utf8.log
+build.log
+build_utf8.log
+error.log
+error_utf8.log
+start.log
+start_utf8.log
+
+# Python virtual environment
+**/.venv/
+**/__pycache__/
+*.pyc
+*.pyo
+
+# ML temp files
+Backend/src/ml/error.log
+Backend/src/ml/start.log
