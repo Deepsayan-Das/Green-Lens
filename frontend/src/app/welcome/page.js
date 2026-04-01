@@ -1,18 +1,19 @@
 'use client';
-import React, { useEffect } from 'react'
-import AuthPage from './auth/page'
-import page from '../app/welcome/page'
-import MouseFollower from './components/MouseFollower';
-import Navbar from './components/Navbar';
-import Hero from './components/Hero';
-import CarbonFootprint from './components/CarbonFootprint';
-import WhatWeDo from './components/WhatWeDo';
-import HowItWorks from './components/HowItWorks';
-import NGOPartnership from './components/NGOPartnership';
-import Footer from './components/Footer';
+import React, { useEffect } from 'react';
 import Lenis from 'lenis';
-import { ScrollTrigger } from 'gsap/all';
 import gsap from 'gsap';
+import { ScrollTrigger } from 'gsap/ScrollTrigger';
+
+import MouseFollower from '../components/MouseFollower';
+import Hero from '../components/Hero';
+import CarbonFootprint from '../components/CarbonFootprint';
+import WhatWeDo from '../components/WhatWeDo';
+import HowItWorks from '../components/HowItWorks';
+import NGOPartnership from '../components/NGOPartnership';
+import Navbar from '../components/Navbar';
+import Footer from '../components/Footer';
+
+gsap.registerPlugin(ScrollTrigger);
 
 export default function Page() {
   useEffect(() => {
@@ -44,31 +45,34 @@ export default function Page() {
       a.addEventListener('click', handleAnchorClick)
     );
 
-    // GSAP cinematic scroll
-    gsap.to('.carbon-section', {
-      scrollTrigger: {
-        trigger: '.hero-section',
-        start: 'bottom bottom',
-        end: '+=120%',
-        scrub: true,
-      },
-      yPercent: -100,
-      ease: 'power2.out',
-    });
+    // GSAP Context to handle cleanup automatically
+    const ctx = gsap.context(() => {
+      // GSAP cinematic scroll
+      gsap.to('.carbon-section', {
+        scrollTrigger: {
+          trigger: '.hero-section',
+          start: 'bottom bottom',
+          end: '+=120%',
+          scrub: true,
+        },
+        yPercent: -100,
+        ease: 'power2.out',
+      });
 
-    gsap.to('.hero-section', {
-      scrollTrigger: {
-        trigger: '.hero-section',
-        start: 'bottom bottom',
-        end: '+=40%',
-        scrub: true,
-      },
-      opacity: 0.6,
-    });
+      gsap.to('.hero-section', {
+        scrollTrigger: {
+          trigger: '.hero-section',
+          start: 'bottom bottom',
+          end: '+=40%',
+          scrub: true,
+        },
+        opacity: 0.6,
+      });
+    }); // Scope to document by default or ref if we had one
 
     return () => {
       lenis.destroy();
-      ScrollTrigger.getAll().forEach(t => t.kill());
+      ctx.revert(); // Reverts all GSAP animations/ScrollTriggers created in context
       document.querySelectorAll('a[href^="#"]').forEach((a) =>
         a.removeEventListener('click', handleAnchorClick)
       );

@@ -1,241 +1,53 @@
 'use client';
 
-import { useUser, UserButton } from '@clerk/nextjs';
-import { Mail, Phone, Coins, Edit, TrendingUp, Award, Zap, Sun, Car, Trees, ShoppingCart } from 'lucide-react';
+import { useUser, useAuth, UserButton } from '@clerk/nextjs';
+import { Mail, Phone, Coins, Edit, TrendingUp, Award, Zap, Sun, Car, Trees, ShoppingCart, Loader2 } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import GraphComponent from '../components/GraphComponent';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { ethers } from "ethers";
-import { getContract } from "../../utils/contract";
+import axios from 'axios';
 
 export default function UserProfile() {
   const router = useRouter();
   const { isLoaded, isSignedIn, user } = useUser();
+  const { getToken } = useAuth();
   
   // Wallet and token states
-  const [account, setAccount] = useState(null);
-  const [balance, setBalance] = useState("0");
   const [greenTokens, setGreenTokens] = useState(0);
-  const [isLoadingTokens, setIsLoadingTokens] = useState(false);
-  const [contractError, setContractError] = useState(null);
-  const [isConnecting, setIsConnecting] = useState(false);
 
-  // Connect wallet function
-  const connectWallet = async () => {
-    if (isConnecting) return; // Prevent multiple simultaneous connection attempts
-    
-    setIsConnecting(true);
-    setContractError(null);
-    
-    try {
-      // Check if we're in browser environment
-      if (typeof window === 'undefined') {
-        console.log("Not in browser environment");
-        return;
-      }
+  // Dashboard State
+  const [dashboardData, setDashboardData] = useState(null);
+  const [loadingDashboard, setLoadingDashboard] = useState(true);
 
-      // Check if MetaMask is installed
-      if (!window.ethereum) {
-        console.warn("MetaMask not installed");
-        setContractError("Please install MetaMask to connect your wallet");
-        return;
-      }
-
-      console.log("Requesting MetaMask accounts...");
-
-      // Request account access
-      const accounts = await window.ethereum.request({ 
-        method: "eth_requestAccounts" 
-      });
-      
-      if (accounts && accounts.length > 0) {
-        const address = accounts[0];
-        console.log("Connected to account:", address);
-        setAccount(address);
-        setContractError(null);
-      } else {
-        console.warn("No accounts found");
-        setContractError("No accounts found. Please unlock MetaMask.");
-      }
-      
-    } catch (error) {
-      console.error("Error connecting wallet:", error);
-      
-      if (error.code === 4001) {
-        // User rejected the request
-        setContractError("Connection rejected. Please approve the connection in MetaMask.");
-      } else if (error.code === -32002) {
-        // Request already pending
-        setContractError("Connection request pending. Please check MetaMask.");
-      } else {
-        setContractError("Failed to connect wallet. Please try again.");
-      }
-    } finally {
-      setIsConnecting(false);
-    }
-  };
-
-  // Disconnect wallet function
-  const disconnectWallet = () => {
-    setAccount(null);
-    setBalance("0");
-    setGreenTokens(0);
-    setContractError(null);
-    console.log("Wallet disconnected");
-  };
-
-  // Fetch token balance
-  const viewTokens = async (walletAddress) => {
-    if (!walletAddress) {
-      console.log("No wallet address provided");
-      return;
-    }
-    
-    setIsLoadingTokens(true);
-    setContractError(null);
-    
-    try {
-      console.log("Fetching balance for:", walletAddress);
-      
-      // Get contract and provider
-      const contractData = await getContract();
-      console.log("Contract data received:", contractData);
-      
-      const contract = contractData.contract || contractData;
-      
-      // Check if contract is valid
-      if (!contract) {
-        throw new Error("Contract not initialized");
-      }
-
-      // Get provider - either from contractData or create new one
-      let provider = contractData.provider;
-      
-      if (!provider) {
-        console.log("Provider not returned from getContract, creating new one...");
-        if (!window.ethereum) {
-          throw new Error("MetaMask not found");
-        }
-        provider = new ethers.BrowserProvider(window.ethereum);
-      }
-
-      // Get network info for debugging
-      const network = await provider.getNetwork();
-      console.log("Connected to network:", network.chainId.toString());
-      
-      // Check if contract has code (is deployed)
-      const contractAddress = contract.target || contract.address;
-      console.log("Contract address:", contractAddress);
-      
-      const code = await provider.getCode(contractAddress);
-      console.log("Contract code length:", code.length);
-      
-      if (code === '0x') {
-        throw new Error("Contract not deployed at this address on current network");
-      }
-
-      console.log("Contract found, fetching balance...");
-      
-      // Attempt to get balance
-      const bal = await contract.balanceOf(walletAddress);
-      console.log("Raw balance:", bal.toString());
-      
-      const formattedBalance = ethers.formatUnits(bal, 18);
-      console.log("Formatted balance:", formattedBalance);
-      
-      setBalance(formattedBalance);
-      setGreenTokens(parseFloat(formattedBalance));
-      
-    } catch (error) {
-      console.error("Error fetching balance:", error);
-      console.error("Error details:", {
-        message: error.message,
-        code: error.code,
-        data: error.data
-      });
-      
-      // Provide more specific error messages
-      let errorMsg = "Failed to fetch balance";
-      if (error.message.includes("not deployed")) {
-        errorMsg = "Contract not deployed on current network";
-      } else if (error.message.includes("BAD_DATA") || error.code === "BAD_DATA") {
-        errorMsg = "Contract address may be incorrect or not deployed";
-      } else if (error.code === "NETWORK_ERROR") {
-        errorMsg = "Network connection error";
-      } else if (error.message.includes("MetaMask")) {
-        errorMsg = "MetaMask connection error";
-      }
-      
-      setContractError(errorMsg);
-      setGreenTokens(0);
-      
-    } finally {
-      setIsLoadingTokens(false);
-    }
-  };
-
-  // Check if wallet is already connected on mount
+  // Fetch Dashboard Data
   useEffect(() => {
-    const checkConnection = async () => {
-      if (typeof window !== 'undefined' && window.ethereum) {
-        try {
-          // Check if already connected
-          const accounts = await window.ethereum.request({ 
-            method: 'eth_accounts' 
-          });
-          
-          if (accounts && accounts.length > 0) {
-            console.log("Already connected to:", accounts[0]);
-            setAccount(accounts[0]);
+    const fetchDashboard = async () => {
+      try {
+        setLoadingDashboard(true);
+        const token = await getToken();
+        const res = await axios.get("http://localhost:8000/api/v1/users/dashboard", {
+          withCredentials: true,
+          headers: {
+            "Authorization": `Bearer ${token}`
           }
-        } catch (error) {
-          console.error("Error checking connection:", error);
+        });
+        if (res.data.success) {
+           setDashboardData(res.data.data);
+           // Use backend tokens if available, or fallback to 0
+           setGreenTokens(res.data.data.totalGreenTokens || 0); 
         }
+      } catch (error) {
+        console.error("Error fetching dashboard:", error);
+      } finally {
+        setLoadingDashboard(false);
       }
     };
 
-    checkConnection();
-
-    // Listen for account changes
-    if (typeof window !== 'undefined' && window.ethereum) {
-      const handleAccountsChanged = (accounts) => {
-        console.log("Accounts changed:", accounts);
-        if (accounts.length === 0) {
-          // User disconnected their wallet
-          disconnectWallet();
-        } else {
-          // User switched accounts
-          setAccount(accounts[0]);
-        }
-      };
-
-      const handleChainChanged = () => {
-        // Reload the page when chain changes
-        console.log("Chain changed, reloading...");
-        window.location.reload();
-      };
-
-      window.ethereum.on('accountsChanged', handleAccountsChanged);
-      window.ethereum.on('chainChanged', handleChainChanged);
-
-      // Cleanup
-      return () => {
-        if (window.ethereum.removeListener) {
-          window.ethereum.removeListener('accountsChanged', handleAccountsChanged);
-          window.ethereum.removeListener('chainChanged', handleChainChanged);
-        }
-      };
+    if (isSignedIn) {
+       fetchDashboard();
     }
-  }, []);
-
-  // Fetch tokens when account changes
-  useEffect(() => {
-    if (account) {
-      console.log("Account connected, fetching tokens...");
-      viewTokens(account);
-    }
-  }, [account]);
+  }, [isSignedIn]);
 
   // Loading state
   if (!isLoaded) {
@@ -317,46 +129,17 @@ export default function UserProfile() {
                   )}
                 </div>
 
-                {/* Wallet Info */}
-                {account ? (
-                  <div className="w-full mt-4 space-y-2">
-                    <div className="p-3 bg-emerald-50 rounded-lg">
-                      <p className="text-xs text-gray-600 mb-1">Connected Wallet</p>
-                      <p className="text-sm font-mono text-emerald-800 truncate">
-                        {account.slice(0, 6)}...{account.slice(-4)}
-                      </p>
+                {/* Stats Summary */}
+                <div className="w-full mt-4 space-y-2">
+                    <div className="flex justify-between items-center p-3 bg-emerald-50 rounded-lg">
+                       <span className="text-sm text-gray-600">Trust Level</span>
+                       <span className="font-bold text-emerald-700">{dashboardData?.profile?.trustLevel || 'New'}</span>
                     </div>
-                    <button 
-                      onClick={disconnectWallet}
-                      className="w-full py-2 px-4 bg-red-100 hover:bg-red-200 text-red-700 rounded-lg text-sm font-medium transition-colors"
-                    >
-                      Disconnect
-                    </button>
-                  </div>
-                ) : (
-                  <div className="w-full mt-4">
-                    <button 
-                      onClick={connectWallet}
-                      disabled={isConnecting}
-                      className="w-full py-3 px-4 bg-emerald-600 hover:bg-emerald-700 disabled:bg-emerald-400 text-white rounded-lg text-sm font-semibold transition-colors flex items-center justify-center gap-2"
-                    >
-                      {isConnecting ? (
-                        <>
-                          <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                          Connecting...
-                        </>
-                      ) : (
-                        <>
-                          <Coins className="w-4 h-4" />
-                          Connect Wallet
-                        </>
-                      )}
-                    </button>
-                    {contractError && (
-                      <p className="text-xs text-red-600 mt-2 text-center">{contractError}</p>
-                    )}
-                  </div>
-                )}
+                     <div className="flex justify-between items-center p-3 bg-emerald-50 rounded-lg">
+                       <span className="text-sm text-gray-600">Carbon Footprint</span>
+                       <span className="font-bold text-emerald-700">{dashboardData?.currentCarbonFootprint?.toFixed(1) || 0} kg</span>
+                    </div>
+                </div>
 
                 {/* Edit Account Button */}
                 <button className="w-full mt-6 py-3 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-semibold flex items-center justify-center gap-2 transition-colors">
@@ -373,31 +156,13 @@ export default function UserProfile() {
                 <Coins className="w-6 h-6" />
               </div>
               
-              {!account ? (
-                <div className="mb-4">
-                  <div className="text-2xl font-bold text-white/90 mb-2">--</div>
-                  <p className="text-sm text-white/80">Connect wallet to view balance</p>
-                </div>
-              ) : contractError ? (
-                <div className="mb-4">
-                  <div className="text-2xl font-bold text-white/90 mb-2">⚠️</div>
-                  <p className="text-sm text-white/90 mb-2">{contractError}</p>
-                  <button 
-                    onClick={() => viewTokens(account)}
-                    className="text-xs underline text-white/80 hover:text-white"
-                  >
-                    Retry
-                  </button>
-                </div>
-              ) : (
                 <div className="text-4xl font-bold mb-2">
-                  {isLoadingTokens ? (
+                  {loadingDashboard ? (
                     <span className="animate-pulse">Loading...</span>
                   ) : (
-                    greenTokens.toLocaleString(undefined, { maximumFractionDigits: 2 })
+                    greenTokens.toLocaleString(undefined, { maximumFractionDigits: 0 })
                   )}
                 </div>
-              )}
               
               <div className="space-y-3 mt-6">
                 <Link href='/store'>
@@ -502,15 +267,33 @@ export default function UserProfile() {
               {/* Quick Stats */}
               <div className="grid grid-cols-3 gap-4 mt-6">
                 <div className="text-center p-4 bg-emerald-50 rounded-xl">
-                  <p className="text-2xl font-bold text-emerald-700">12</p>
+                  <p className="text-2xl font-bold text-emerald-700">
+                    {loadingDashboard ? (
+                      <span className="animate-pulse">...</span>
+                    ) : (
+                      dashboardData?.totalSubmissions || 0
+                    )}
+                  </p>
                   <p className="text-sm text-gray-600">Submissions</p>
                 </div>
                 <div className="text-center p-4 bg-green-50 rounded-xl">
-                  <p className="text-2xl font-bold text-green-700">847 kg</p>
+                  <p className="text-2xl font-bold text-green-700">
+                    {loadingDashboard ? (
+                      <span className="animate-pulse">...</span>
+                    ) : (
+                      dashboardData?.co2Saved || 0
+                    )} kg
+                  </p>
                   <p className="text-sm text-gray-600">CO₂ Saved</p>
                 </div>
                 <div className="text-center p-4 bg-teal-50 rounded-xl">
-                  <p className="text-2xl font-bold text-teal-700">23</p>
+                  <p className="text-2xl font-bold text-teal-700">
+                     {loadingDashboard ? (
+                      <span className="animate-pulse">...</span>
+                    ) : (
+                      dashboardData?.treesPlanted || 0
+                    )}
+                  </p>
                   <p className="text-sm text-gray-600">Trees Planted</p>
                 </div>
               </div>
@@ -518,7 +301,14 @@ export default function UserProfile() {
           </div>
         </div>
       </div>
-      <div><GraphComponent/></div>
+      <div>
+        {dashboardData && (
+          <GraphComponent 
+             monthlyTokens={dashboardData.monthlyTokens} 
+             activityBreakdown={dashboardData.activityBreakdown} 
+          />
+        )}
+      </div>
     </div>
   );
 }

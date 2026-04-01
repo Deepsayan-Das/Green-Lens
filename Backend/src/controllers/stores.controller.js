@@ -2,17 +2,26 @@ import { asyncHandler } from "../utils/asyncHandler.js";
 import { ApiError } from "../utils/apiError.js";
 import { ApiResponse } from "../utils/apiResponse.js";
 import { User } from "../models/models.js";
-import axios from "axios";
 
-// const STORE_ITEMS = {
-//   VOUCHER_500: 500,
-//   MERCH_TEE: 2000,
-//   DONATE_100: 100,
-// };
+// Products map based on frontend data
+const STORE_ITEMS = {
+  1: 1000,   // Bamboo Toothbrush
+  2: 4000,   // Reusable Metal Bottle
+  3: 2000,   // Organic Cotton Tote Bag
+  4: 8000,   // Solar Lantern
+  5: 2500,   // Plantable Seed Notebook
+  6: 3000,   // Eco Soap Bar
+  7: 1500,   // Bamboo Cutlery Set
+  8: 800,    // Beeswax Food Wraps
+  9: 5000,   // Compost Bin
+  10: 1000,  // Reusable Coffee Cup
+  11: 10000, // Solar Phone Charger
+  12: 5000,  // Recycled Paper Journal
+};
 
 export const redeemItem = asyncHandler(async (req, res) => {
-  // 1. Get the product ID
-  const { productId } = req.body;
+  // 1. Get the product ID and quantity
+  const { productId, quantity = 1 } = req.body;
 
   // 2. Validation
   if (!productId) {
@@ -20,12 +29,14 @@ export const redeemItem = asyncHandler(async (req, res) => {
   }
 
   // 3. Map the cost
-  const costInTokens = STORE_ITEMS[productId];
+  const pricePerUnit = STORE_ITEMS[productId];
 
   // 4. Check if the product ID exists
-  if (costInTokens === undefined) {
+  if (pricePerUnit === undefined) {
     throw new ApiError(404, "Product not found or invalid");
   }
+
+  const costInTokens = pricePerUnit * quantity;
 
   // 5. Get the authenticated user's ID
   const clerkId = req.auth.userId;
@@ -46,27 +57,13 @@ export const redeemItem = asyncHandler(async (req, res) => {
     );
   }
 
-  // 9. Call the external blockchain API to burn the corresponding tokens
-  try {
-    await axios.post(`${process.env.BLOCKCHAIN_API_URL}/burn`, {
-      amount: costInTokens,
-    });
-  } catch (error) {
-    // 10. If blockchain fails, STOP and throw an error.
-    console.error("Blockchain burn failed:", error.message);
-    throw new ApiError(
-      500,
-      "Blockchain service failed. Your tokens were not deducted. Please try again."
-    );
-  }
-
-  // 11. if try successful
+  // 9. Deduct tokens (No Blockchain)
   user.greenTokens -= costInTokens;
 
-  // 12. Save the user's new balance
+  // 10. Save the user's new balance
   await user.save({ validateBeforeSave: false });
 
-  // 14. Send a response
+  // 11. Send a response
   return res
     .status(200)
     .json(

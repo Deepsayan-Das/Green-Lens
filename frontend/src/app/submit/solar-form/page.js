@@ -2,88 +2,27 @@
 import { motion } from 'framer-motion';
 import { Sun, Upload, CheckCircle, Loader2 } from 'lucide-react';
 import { useState } from 'react';
+import axios from 'axios';
+
+import { useAuth } from '@clerk/nextjs';
 
 export default function SolarForm() {
+  const { getToken } = useAuth();
   const [formData, setFormData] = useState({
     company: '',
     unitsGenerated: '',
+    unitsCharged: '', // [NEW] Added for net calculation
     homeType: '',
     carpetArea: '',
     billFile: null
   });
   const [submitted, setSubmitted] = useState(false);
-  const [isMinting, setIsMinting] = useState(false);
-  const [account, setAccount] = useState(null);
-
-  // Connect wallet function
-  const connectWallet = async () => {
-    if (window.ethereum) {
-      try {
-        const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
-        setAccount(accounts[0]);
-        return accounts[0];
-      } catch (error) {
-        console.error("Error connecting wallet:", error);
-        return null;
-      }
-    }
-    return null;
-  };
+  const [loading, setLoading] = useState(false);
+  const [responseMsg, setResponseMsg] = useState('');
 
   const handleFileChange = (e) => {
     if (e.target.files && e.target.files[0]) {
       setFormData({ ...formData, billFile: e.target.files[0] });
-    }
-  };
-
-  const mintTokens = async (connectedAccount) => {
-    try {
-      console.log("Minting tokens to:", connectedAccount);
-      
-      // Import ethers dynamically
-      const { ethers } = await import('ethers');
-      
-      // You'll need to provide your contract ABI and address
-      const contractAddress = "YOUR_CONTRACT_ADDRESS";
-      const contractABI = [
-        "function mint(address to, uint256 amount) public"
-      ];
-
-      if (!window.ethereum) {
-        throw new Error("MetaMask not found");
-      }
-
-      const provider = new ethers.BrowserProvider(window.ethereum);
-      const signer = await provider.getSigner();
-      const contract = new ethers.Contract(contractAddress, contractABI, signer);
-
-      // Verify contract is deployed
-      const code = await provider.getCode(contractAddress);
-      if (code === '0x' || code === '0x0') {
-        throw new Error("Contract not deployed on current network. Please switch to the correct network.");
-      }
-
-      console.log("Minting 50 tokens...");
-      const tx = await contract.mint(connectedAccount, ethers.parseUnits("50", 18));
-      console.log("Transaction sent:", tx.hash);
-      
-      await tx.wait();
-      console.log("Transaction confirmed!");
-      
-      return true;
-    } catch (error) {
-      console.error("Error minting:", error);
-      
-      let errorMsg = "Failed to mint tokens";
-      if (error.message.includes("not deployed")) {
-        errorMsg = "Contract not deployed. Please check your network.";
-      } else if (error.code === "ACTION_REJECTED") {
-        errorMsg = "Transaction rejected by user";
-      } else if (error.message.includes("insufficient funds")) {
-        errorMsg = "Insufficient funds for gas";
-      }
-      
-      throw new Error(errorMsg);
     }
   };
 
@@ -95,46 +34,54 @@ export default function SolarForm() {
       return;
     }
 
-    setIsMinting(true);
+    setLoading(true);
 
     try {
-      // Connect wallet if not connected
-      let walletAccount = account;
-      if (!walletAccount) {
-        walletAccount = await connectWallet();
-        if (!walletAccount) {
-          alert("⚠️ Please connect your wallet first!");
-          setIsMinting(false);
-          return;
-        }
-      }
+      const data = new FormData();
+      data.append("solarCompany", formData.company);
+      data.append("unitsGenerated", formData.unitsGenerated);
+      data.append("unitsCharged", formData.unitsCharged || 0); // Optional
+      data.append("homeType", formData.homeType); // (Note: Backend currently gets this from Profile, but good to have)
+      data.append("carpetArea", formData.carpetArea); // (Same as above)
+      data.append("solarBillProof", formData.billFile);
 
-      // Log solar power data
-      console.log('Solar Power Data Submitted:', formData);
+      const token = await getToken();
 
-      // Mint tokens
-      await mintTokens(walletAccount);
+      // Call Backend API
+      const res = await axios.post("http://localhost:8000/api/v1/form/solar", data, {
+        withCredentials: true, // Important for cookies/auth
+        headers: {
+          "Content-Type": "multipart/form-data",
+          "Authorization": `Bearer ${token}`
+        },
+      });
+
+      console.log('Backend Response:', res.data);
       
-      // Success!
-      alert("✅ Solar power data submitted and 50 Green Tokens minted successfully!");
+      const tokensEarned = res.data.data.tokensEarned;
+      setResponseMsg(`✅ Solar power data submitted! You earned ${tokensEarned} Green Tokens!`);
       setSubmitted(true);
       
       // Reset form after 3 seconds
       setTimeout(() => {
         setSubmitted(false);
+        setResponseMsg('');
         setFormData({
           company: '',
           unitsGenerated: '',
+          unitsCharged: '',
           homeType: '',
           carpetArea: '',
           billFile: null
         });
-      }, 3000);
+      }, 4000);
 
     } catch (error) {
-      alert(`❌ ${error.message}`);
+      console.error("Submission error:", error);
+      const errMsg = error.response?.data?.message || error.message || "Failed to submit";
+      alert(`❌ ${errMsg}`);
     } finally {
-      setIsMinting(false);
+      setLoading(false);
     }
   };
 
@@ -166,25 +113,41 @@ export default function SolarForm() {
               required
               value={formData.company}
               onChange={(e) => setFormData({ ...formData, company: e.target.value })}
-              className="w-full px-4 py-3 border-2 border-amber-300 rounded-xl focus:outline-none focus:border-amber-700 transition-colors"
+              className="w-full px-4 py-3 border-2 border-amber-300 rounded-xl focus:outline-none focus:border-amber-700 transition-colors text-amber-900 placeholder:text-amber-400"
               placeholder="e.g., SunPower, Tesla Solar"
             />
           </div>
 
-          <div>
-            <label className="block text-sm font-medium text-amber-900 mb-2">
-              Units Generated (kWh) *
-            </label>
-            <input
-              type="number"
-              required
-              min="0"
-              step="0.01"
-              value={formData.unitsGenerated}
-              onChange={(e) => setFormData({ ...formData, unitsGenerated: e.target.value })}
-              className="w-full px-4 py-3 border-2 border-amber-300 rounded-xl focus:outline-none focus:border-amber-700 transition-colors"
-              placeholder="e.g., 320"
-            />
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-amber-900 mb-2">
+                Units Generated (kWh) *
+              </label>
+              <input
+                type="number"
+                required
+                min="0"
+                step="0.01"
+                value={formData.unitsGenerated}
+                onChange={(e) => setFormData({ ...formData, unitsGenerated: e.target.value })}
+                className="w-full px-4 py-3 border-2 border-amber-300 rounded-xl focus:outline-none focus:border-amber-700 transition-colors text-amber-900 placeholder:text-amber-400"
+                placeholder="e.g., 320"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-amber-900 mb-2">
+                Units Charged (kWh)
+              </label>
+              <input
+                type="number"
+                min="0"
+                step="0.01"
+                value={formData.unitsCharged}
+                onChange={(e) => setFormData({ ...formData, unitsCharged: e.target.value })}
+                className="w-full px-4 py-3 border-2 border-amber-300 rounded-xl focus:outline-none focus:border-amber-700 transition-colors text-amber-900 placeholder:text-amber-400"
+                placeholder="From Grid (Optional"
+              />
+            </div>
           </div>
 
           <div>
@@ -195,7 +158,7 @@ export default function SolarForm() {
               required
               value={formData.homeType}
               onChange={(e) => setFormData({ ...formData, homeType: e.target.value })}
-              className="w-full px-4 py-3 border-2 border-amber-300 rounded-xl focus:outline-none focus:border-amber-700 transition-colors"
+              className="w-full px-4 py-3 border-2 border-amber-300 rounded-xl focus:outline-none focus:border-amber-700 transition-colors text-amber-900 placeholder:text-amber-400"
             >
               <option value="">Select home type</option>
               <option value="apartment">Apartment</option>
@@ -216,7 +179,7 @@ export default function SolarForm() {
               min="0"
               value={formData.carpetArea}
               onChange={(e) => setFormData({ ...formData, carpetArea: e.target.value })}
-              className="w-full px-4 py-3 border-2 border-amber-300 rounded-xl focus:outline-none focus:border-amber-700 transition-colors"
+              className="w-full px-4 py-3 border-2 border-amber-300 rounded-xl focus:outline-none focus:border-amber-700 transition-colors text-amber-900 placeholder:text-amber-400"
               placeholder="e.g., 1200"
             />
           </div>
@@ -249,32 +212,35 @@ export default function SolarForm() {
           <motion.button
             type="button"
             onClick={handleSubmit}
-            disabled={isMinting || submitted}
-            whileHover={{ scale: isMinting ? 1 : 1.02 }}
-            whileTap={{ scale: isMinting ? 1 : 0.98 }}
+            disabled={loading || submitted}
+            whileHover={{ scale: loading ? 1 : 1.02 }}
+            whileTap={{ scale: loading ? 1 : 0.98 }}
             className="w-full py-4 bg-gradient-to-r from-amber-700 to-orange-800 text-white rounded-xl font-semibold shadow-lg flex items-center justify-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed"
           >
-            {isMinting ? (
+            {loading ? (
               <>
                 <Loader2 className="w-5 h-5 animate-spin" />
-                Minting Tokens...
+                Processing...
               </>
             ) : submitted ? (
               <>
                 <CheckCircle className="w-5 h-5" />
-                Submitted Successfully!
+                Success!
               </>
             ) : (
-              'Submit & Earn Tokens'
+              'Submit & Earn Points'
             )}
           </motion.button>
         </div>
 
-        <div className="mt-6 p-4 bg-amber-50 rounded-xl">
-          <p className="text-sm text-amber-900">
-            ☀️ <strong>Token Reward:</strong> Earn 50 bonus tokens for every submission of clean solar energy generated!
-          </p>
-        </div>
+        {submitted && (
+          <div className="mt-6 p-4 bg-green-50 border border-green-200 rounded-xl">
+             <p className="text-sm text-green-800 font-medium text-center">
+                {responseMsg}
+             </p>
+          </div>
+        )}
+
       </motion.div>
     </div>
   );

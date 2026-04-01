@@ -252,7 +252,7 @@ export default function PurchaseForm() {
                   required
                   value={formData.solarCompany}
                   onChange={(e) => setFormData({ ...formData, solarCompany: e.target.value })}
-                  className="w-full px-4 py-3 border-2 border-purple-300 rounded-xl focus:outline-none focus:border-purple-700 transition-colors"
+                  className="w-full px-4 py-3 border-2 border-purple-300 rounded-xl focus:outline-none focus:border-purple-700 transition-colors text-purple-900 placeholder:text-purple-400"
                   placeholder="e.g., Tata Solar, Adani Solar"
                 />
               </div>
@@ -269,7 +269,7 @@ export default function PurchaseForm() {
                     step="0.1"
                     value={formData.panelCapacity}
                     onChange={(e) => setFormData({ ...formData, panelCapacity: e.target.value })}
-                    className="w-full px-4 py-3 border-2 border-purple-300 rounded-xl focus:outline-none focus:border-purple-700 transition-colors"
+                    className="w-full px-4 py-3 border-2 border-purple-300 rounded-xl focus:outline-none focus:border-purple-700 transition-colors text-purple-900 placeholder:text-purple-400"
                     placeholder="e.g., 5.5"
                   />
                 </div>
@@ -284,7 +284,7 @@ export default function PurchaseForm() {
                     min="1"
                     value={formData.numberOfPanels}
                     onChange={(e) => setFormData({ ...formData, numberOfPanels: e.target.value })}
-                    className="w-full px-4 py-3 border-2 border-purple-300 rounded-xl focus:outline-none focus:border-purple-700 transition-colors"
+                    className="w-full px-4 py-3 border-2 border-purple-300 rounded-xl focus:outline-none focus:border-purple-700 transition-colors text-purple-900 placeholder:text-purple-400"
                     placeholder="e.g., 12"
                   />
                 </div>
@@ -299,7 +299,7 @@ export default function PurchaseForm() {
                   required
                   value={formData.installationDate}
                   onChange={(e) => setFormData({ ...formData, installationDate: e.target.value })}
-                  className="w-full px-4 py-3 border-2 border-purple-300 rounded-xl focus:outline-none focus:border-purple-700 transition-colors"
+                  className="w-full px-4 py-3 border-2 border-purple-300 rounded-xl focus:outline-none focus:border-purple-700 transition-colors text-purple-900 placeholder:text-purple-400"
                 />
               </div>
             </motion.div>
@@ -323,7 +323,7 @@ export default function PurchaseForm() {
                     required
                     value={formData.evBrand}
                     onChange={(e) => setFormData({ ...formData, evBrand: e.target.value })}
-                    className="w-full px-4 py-3 border-2 border-purple-300 rounded-xl focus:outline-none focus:border-purple-700 transition-colors"
+                    className="w-full px-4 py-3 border-2 border-purple-300 rounded-xl focus:outline-none focus:border-purple-700 transition-colors text-purple-900 placeholder:text-purple-400"
                     placeholder="e.g., Tesla, Tata"
                   />
                 </div>
@@ -337,7 +337,7 @@ export default function PurchaseForm() {
                     required
                     value={formData.evModel}
                     onChange={(e) => setFormData({ ...formData, evModel: e.target.value })}
-                    className="w-full px-4 py-3 border-2 border-purple-300 rounded-xl focus:outline-none focus:border-purple-700 transition-colors"
+                    className="w-full px-4 py-3 border-2 border-purple-300 rounded-xl focus:outline-none focus:border-purple-700 transition-colors text-purple-900 placeholder:text-purple-400"
                     placeholder="e.g., Model 3, Nexon EV"
                   />
                 </div>
@@ -354,7 +354,7 @@ export default function PurchaseForm() {
                   step="0.1"
                   value={formData.batteryCapacity}
                   onChange={(e) => setFormData({ ...formData, batteryCapacity: e.target.value })}
-                  className="w-full px-4 py-3 border-2 border-purple-300 rounded-xl focus:outline-none focus:border-purple-700 transition-colors"
+                  className="w-full px-4 py-3 border-2 border-purple-300 rounded-xl focus:outline-none focus:border-purple-700 transition-colors text-purple-900 placeholder:text-purple-400"
                   placeholder="e.g., 40.5"
                 />
               </div>
@@ -368,7 +368,7 @@ export default function PurchaseForm() {
                   required
                   value={formData.vehicleNumber}
                   onChange={(e) => setFormData({ ...formData, vehicleNumber: e.target.value })}
-                  className="w-full px-4 py-3 border-2 border-purple-300 rounded-xl focus:outline-none focus:border-purple-700 transition-colors"
+                  className="w-full px-4 py-3 border-2 border-purple-300 rounded-xl focus:outline-none focus:border-purple-700 transition-colors text-purple-900 placeholder:text-purple-400"
                   placeholder="e.g., MH12AB1234"
                 />
               </div>
@@ -382,7 +382,7 @@ export default function PurchaseForm() {
                   required
                   value={formData.purchaseDate}
                   onChange={(e) => setFormData({ ...formData, purchaseDate: e.target.value })}
-                  className="w-full px-4 py-3 border-2 border-purple-300 rounded-xl focus:outline-none focus:border-purple-700 transition-colors"
+                  className="w-full px-4 py-3 border-2 border-purple-300 rounded-xl focus:outline-none focus:border-purple-700 transition-colors text-purple-900 placeholder:text-purple-400"
                 />
               </div>
             </motion.div>

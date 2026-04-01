@@ -6,9 +6,11 @@ import { Address } from "../models/models.js";
 import { ElectricityUsage } from "../models/models.js";
 import axios from "axios";
 
+import { getOrCreateUser } from "../utils/userUtils.js";
+
 export const logElectricityBill = asyncHandler(async (req, res) => {
   // 1. Get data from request body
-  const { bill, month, unitsUsed, solarUsed } = req.body;
+  const { bill, month, unitsUsed, solarUsed, homeType, carpetArea } = req.body;
   const clerkId = req.auth.userId;
 
   if (!month || unitsUsed === undefined) {
@@ -16,14 +18,17 @@ export const logElectricityBill = asyncHandler(async (req, res) => {
   }
 
   // 2. Find User and their Address 
-  const user = await User.findOne({ clerkId });
-  if (!user) throw new ApiError(404, "User not found");
+  const user = await getOrCreateUser(clerkId);
 
-  const address = await Address.findById(user.addressId);
-  if (!address || !address.homeType || !address.carpetArea) {
+  const address = user.addressId ? await Address.findById(user.addressId) : null;
+  
+  const finalHomeType = homeType || address?.homeType;
+  const finalCarpetArea = carpetArea || address?.carpetArea;
+
+  if (!finalHomeType || !finalCarpetArea) {
     throw new ApiError(
       400,
-      "Please update your address and home details in your profile first."
+      "Home Type and Carpet Area are required. Please provide them in the form or update your profile."
     );
   }
 
@@ -31,8 +36,8 @@ export const logElectricityBill = asyncHandler(async (req, res) => {
   let mlResponse;
   try {
     const payload = {
-      homeType: address.homeType,
-      carpetArea_sqft: parseFloat(address.carpetArea),
+      homeType: finalHomeType,
+      carpetArea_sqft: parseFloat(finalCarpetArea),
       monthly_unitsUsed_kwh: parseFloat(unitsUsed),
       monthly_solarUsed_kwh: parseFloat(solarUsed) || 0,
     };
@@ -41,8 +46,7 @@ export const logElectricityBill = asyncHandler(async (req, res) => {
       payload
     );
   } catch (error) {
-    console.error("ML API Error:", error.message);
-    throw new ApiError(500, "ML service is unavailable");
+    throw new ApiError(500, "ML service is unavailable", [error.message]);
   }
 
   // 4. Process ML Response

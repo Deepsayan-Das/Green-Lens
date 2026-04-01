@@ -8,7 +8,7 @@ const app = express();
 // --- Core Middlewares ---
 app.use(
   cors({
-    origin: process.env.CORS_ORIGIN || "http://localhost:5173",
+    origin: ["http://localhost:3000", "http://localhost:3001", "http://localhost:5173", process.env.CORS_ORIGIN],
     credentials: true,
   })
 );
@@ -20,7 +20,7 @@ app.use(cookieParser());
 // --- Import Routes ---
 import userRouter from "./routes/user.routes.js";
 import storeRouter from "./routes/store.routes.js";
-import formRouter from "./routes/form.routes.js";
+import formRouter from "./routes/submit.routes.js";
 
 // --- Route Declarations ---
 app.use("/api/v1/users", userRouter);
@@ -30,6 +30,16 @@ app.use("/api/v1/form", formRouter);
 // --- Health Check Route ---
 app.get("/", (req, res) => {
   res.send("GreenLens backend running successfully!");
+});
+
+// --- Error Handler ---
+app.use((err, req, res, next) => {
+  const statusCode = err.statusCode || 500;
+  res.status(statusCode).json({
+    success: false,
+    message: err.message || "Internal Server Error",
+    errors: err.errors || [],
+  });
 });
 
 // --- Export app ---

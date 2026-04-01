@@ -1,8 +1,9 @@
 'use client';
 import React, {useState, useEffect} from "react";
 import {products} from "../data/product.js";
-import { ethers } from "ethers";
-import { getContract } from "../../utils/contract";
+import React, {useState, useEffect} from "react";
+import {products} from "../data/product.js";
+import axios from "axios";
 
 const initialForm = {
     name: "",
@@ -33,67 +34,7 @@ const SubmitPage = () => {
       }
     }, []);
 
-    const burnTokens = async (val) => {
-      setBurning(true);
-      try {
-        // Get contract
-        const contractData = await getContract();
-        const contract = contractData.contract || contractData;
-        
-        if (!contract) {
-          throw new Error("Contract not initialized");
-        }
-
-        // Get provider
-        let provider = contractData.provider;
-        if (!provider) {
-          console.log("Creating new provider...");
-          if (!window.ethereum) {
-            throw new Error("MetaMask not found");
-          }
-          provider = new ethers.BrowserProvider(window.ethereum);
-        }
-
-        // Verify contract is deployed
-        const contractAddress = contract.target || contract.address;
-        const code = await provider.getCode(contractAddress);
-        if (code === '0x') {
-          throw new Error("Contract not deployed on this network");
-        }
-
-        console.log(`Attempting to burn ${val} tokens...`);
-        
-        // Parse the amount with correct decimals (18)
-        const amount = ethers.parseUnits(val.toString(), 18);
-        console.log("Parsed amount:", amount.toString());
-        
-        const tx = await contract.burn(amount);
-        console.log("Transaction sent:", tx.hash);
-        
-        await tx.wait();
-        console.log("Transaction confirmed!");
-        
-        alert(`🔥 ${val} Green Tokens burned successfully!`);
-      } catch (error) {
-        console.error("Error burning tokens:", error);
-        console.error("Error details:", error.message, error.code);
-        
-        let errorMsg = "Failed to burn tokens";
-        if (error.message.includes("not deployed")) {
-          errorMsg = "Contract not found on current network";
-        } else if (error.code === "ACTION_REJECTED") {
-          errorMsg = "Transaction rejected by user";
-        } else if (error.message.includes("insufficient")) {
-          errorMsg = "Insufficient token balance";
-        } else if (error.message.includes("MetaMask")) {
-          errorMsg = "MetaMask connection error";
-        }
-        
-        alert(`❌ ${errorMsg}`);
-      } finally {
-        setBurning(false);
-      }
-    };
+    // Token burning logic replaced by Backend API call
   
     const handleChange = (e) => {
       const { name, value, type, checked } = e.target;
@@ -147,14 +88,28 @@ const SubmitPage = () => {
       const selectedProduct = products.find((p) => p.id === Number(form.productId));
       const totalCost = selectedProduct ? selectedProduct.price * form.quantity : 0;
       
-      // Burn tokens first
-      if (totalCost > 0) {
-        try {
-          await burnTokens(totalCost);
-        } catch (error) {
+      
+      // Call Backend API to redeem/burn tokens
+      try {
+          setBurning(true);
+          const res = await axios.post("http://localhost:8000/api/v1/store/redeem", {
+              productId: form.productId,
+              quantity: form.quantity
+          }, {
+              withCredentials: true
+          });
+
+          if (res.data.success) {
+              alert(`🔥 Redeemed successfully! New Balance: ${res.data.data.newTotalTokens}`);
+          }
+      } catch (error) {
+          console.error("Redemption failed:", error);
+          alert(error.response?.data?.message || "Failed to redeem. Check your balance.");
           setLoading(false);
-          return; // Don't proceed if burning fails
-        }
+          setBurning(false);
+          return;
+      } finally {
+          setBurning(false);
       }
       
       await new Promise((r) => setTimeout(r, 700));

@@ -5,13 +5,17 @@ import { User, Address, Solar } from "../models/models.js";
 import { uploadOnCloudinary } from "../utils/cloudinary.js";
 import axios from "axios";
 
+import { getOrCreateUser } from "../utils/userUtils.js";
+
 export const logSolarGeneration = asyncHandler(async (req, res) => {
   // 1. Get data from form and user
-  const { solarCompany, unitsGenerated } = req.body;
+  const { solarCompany, unitsGenerated, unitsCharged } = req.body;
   const clerkId = req.auth.userId;
 
   // 2. Validate form data
   const numUnitsGenerated = Number(unitsGenerated);
+  const numUnitsCharged = Number(unitsCharged) || 0; // Default to 0 if not provided
+  
   if (!numUnitsGenerated || numUnitsGenerated <= 0) {
     throw new ApiError(400, "Valid 'Units Generated (kWh)' are required.");
   }
@@ -20,10 +24,7 @@ export const logSolarGeneration = asyncHandler(async (req, res) => {
   }
 
   // 3. Find User and their Address
-  const user = await User.findOne({ clerkId });
-  if (!user) {
-    throw new ApiError(404, "User not found");
-  }
+  const user = await getOrCreateUser(clerkId);
 
   // The ML model needs homeType and carpetArea. We get this from the user's saved Address.
   const address = await Address.findById(user.addressId);
@@ -45,10 +46,14 @@ export const logSolarGeneration = asyncHandler(async (req, res) => {
     throw new ApiError(500, "Failed to upload bill/report");
   }
   const billProofUrl = cloudinaryResponse.url;
+  
+  // TO-DO: Integrate ML OCR here to validate `unitsGenerated` and `unitsCharged` from `billProofUrl`
+  // Example: 
+  // const ocrResult = await mlService.extractData(billProofUrl);
+  // if (Math.abs(ocrResult.units - numUnitsGenerated) > 5) throw new ApiError(400, "Data mismatch.");
 
-  // 5. Call the FastAPI ML Service
-  // We re-use the electricity endpoint, as it's designed to process solar.
-  // We assume "unitsUsed" (consumed from grid) is 0 for this form.
+  // 5. Call the FastAPI ML Service (for Carbon Footprint calculation primarily)
+  // We assume "unitsUsed" (consumed from grid) is 0 for this form, or we use net metering logic if available.
   let mlResponse;
   try {
     const payload = {
@@ -62,12 +67,17 @@ export const logSolarGeneration = asyncHandler(async (req, res) => {
       payload
     );
   } catch (error) {
-    console.error("ML API Error:", error.message);
-    throw new ApiError(500, "ML service is unavailable");
+    throw new ApiError(500, "ML service is unavailable", [error.message]);
   }
 
-  // 6. Process ML Response
-  const { user_co2_footprint_kg, tokens_awarded } = mlResponse.data;
+  // 6. Process ML Response & Calculate Points
+  const { user_co2_footprint_kg } = mlResponse.data;
+  
+  // Custom Point Logic: (Generated - Charged) * Multiplier
+  // Example: 1 Point for every 10 kWh net generated? Or 1 point per kWh?
+  // Let's use: 1 point per 5 kWh net generated.
+  const netUnits = Math.max(0, numUnitsGenerated - numUnitsCharged);
+  const tokens_awarded = Math.floor(netUnits / 5);
 
   // 7. Update the Solar document
   // This will find the user's Solar doc or create one if it doesn't exist.
@@ -85,7 +95,7 @@ export const logSolarGeneration = asyncHandler(async (req, res) => {
 
   // 8. Update the User's tokens
   user.greenTokens += tokens_awarded;
-  // We also update the carbon footprint, as the ML model calculated it
+  // We also update the carbon footprint, as the ML model calculated it (it might be negative/low due to solar)
   user.carbonFootprint = user_co2_footprint_kg;
   await user.save({ validateBeforeSave: false });
 
@@ -95,6 +105,7 @@ export const logSolarGeneration = asyncHandler(async (req, res) => {
       201,
       {
         unitsGenerated: numUnitsGenerated,
+        unitsCharged: numUnitsCharged,
         tokensEarned: tokens_awarded,
         totalSolarUnits: solarData.totalSolarUnitsUsed,
         newTotalTokens: user.greenTokens,

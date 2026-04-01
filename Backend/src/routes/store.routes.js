@@ -1,12 +1,12 @@
-// import { Router } from "express";
-// import { redeemItem } from "../controllers/stores.controller.js";
-// import { authMiddleware } from "../middlewares/auth.middleware.js";
+import { Router } from "express";
+import { redeemItem } from "../controllers/stores.controller.js";
+import { authMiddleware } from "../middlewares/auth.middleware.js";
 
-// const router = Router();
+const router = Router();
 
-// router.use(authMiddleware);
+router.use(authMiddleware);
 
-// // Route for redeeming an item
-// router.route("/redeem").post(redeemItem);
+// Route for redeeming an item
+router.route("/redeem").post(redeemItem);
 
-// export default router;
+export default router;

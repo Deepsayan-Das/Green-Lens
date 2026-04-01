@@ -2,8 +2,12 @@
 import { motion } from 'framer-motion';
 import { Trees, Upload, CheckCircle, Plus, X, Loader2 } from 'lucide-react';
 import { useState } from 'react';
+import axios from 'axios';
+
+import { useAuth } from '@clerk/nextjs';
 
 export default function PlantationForm() {
+  const { getToken } = useAuth();
   const [formData, setFormData] = useState({
     numberOfTrees: '',
     location: '',
@@ -11,23 +15,8 @@ export default function PlantationForm() {
     imageFile: null
   });
   const [submitted, setSubmitted] = useState(false);
-  const [isMinting, setIsMinting] = useState(false);
-  const [account, setAccount] = useState(null);
-
-  // Connect wallet function (you'll need to call this elsewhere or on mount)
-  const connectWallet = async () => {
-    if (window.ethereum) {
-      try {
-        const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
-        setAccount(accounts[0]);
-        return accounts[0];
-      } catch (error) {
-        console.error("Error connecting wallet:", error);
-        return null;
-      }
-    }
-    return null;
-  };
+  const [loading, setLoading] = useState(false);
+  const [responseMsg, setResponseMsg] = useState('');
 
   const handleFileChange = (e) => {
     if (e.target.files && e.target.files[0]) {
@@ -50,57 +39,6 @@ export default function PlantationForm() {
     setFormData({ ...formData, treeTypes: newTypes });
   };
 
-  const mintTokens = async (connectedAccount) => {
-    try {
-      console.log("Minting tokens to:", connectedAccount);
-      
-      // Import ethers dynamically
-      const { ethers } = await import('ethers');
-      
-      // You'll need to provide your contract ABI and address
-      const contractAddress = "YOUR_CONTRACT_ADDRESS";
-      const contractABI = [
-        "function mint(address to, uint256 amount) public"
-      ];
-
-      if (!window.ethereum) {
-        throw new Error("MetaMask not found");
-      }
-
-      const provider = new ethers.BrowserProvider(window.ethereum);
-      const signer = await provider.getSigner();
-      const contract = new ethers.Contract(contractAddress, contractABI, signer);
-
-      // Verify contract is deployed
-      const code = await provider.getCode(contractAddress);
-      if (code === '0x' || code === '0x0') {
-        throw new Error("Contract not deployed on current network. Please switch to the correct network.");
-      }
-
-      console.log("Minting 50 tokens...");
-      const tx = await contract.mint(connectedAccount, ethers.parseUnits("50", 18));
-      console.log("Transaction sent:", tx.hash);
-      
-      await tx.wait();
-      console.log("Transaction confirmed!");
-      
-      return true;
-    } catch (error) {
-      console.error("Error minting:", error);
-      
-      let errorMsg = "Failed to mint tokens";
-      if (error.message.includes("not deployed")) {
-        errorMsg = "Contract not deployed. Please check your network.";
-      } else if (error.code === "ACTION_REJECTED") {
-        errorMsg = "Transaction rejected by user";
-      } else if (error.message.includes("insufficient funds")) {
-        errorMsg = "Insufficient funds for gas";
-      }
-      
-      throw new Error(errorMsg);
-    }
-  };
-
   const handleSubmit = async () => {
     // Validate form
     if (!formData.numberOfTrees || !formData.location || !formData.imageFile) {
@@ -113,45 +51,50 @@ export default function PlantationForm() {
       return;
     }
 
-    setIsMinting(true);
+    setLoading(true);
 
     try {
-      // Connect wallet if not connected
-      let walletAccount = account;
-      if (!walletAccount) {
-        walletAccount = await connectWallet();
-        if (!walletAccount) {
-          alert("⚠️ Please connect your wallet first!");
-          setIsMinting(false);
-          return;
+      const data = new FormData();
+      data.append("plantCount", formData.numberOfTrees);
+      data.append("plantationLocation", formData.location);
+      data.append("treeSpecies", formData.treeTypes.join(', '));
+      data.append("plantImage", formData.imageFile);
+
+      const token = await getToken();
+
+      // Call Backend API
+      const res = await axios.post("http://localhost:8000/api/v1/form/plantation", data, {
+        withCredentials: true,
+        headers: {
+           "Content-Type": "multipart/form-data",
+           "Authorization": `Bearer ${token}`
         }
+      });
+
+      console.log('Backend Response:', res.data);
+      if(res.data.success) {
+         setResponseMsg(`✅ Plantation submitted! Earned ${res.data.data.tokensEarned} Green Points!`);
+         setSubmitted(true);
       }
-
-      // Log plantation data
-      console.log('Plantation Data Submitted:', formData);
-
-      // Mint tokens
-      await mintTokens(walletAccount);
-      
-      // Success!
-      alert("✅ Plantation submitted and 50 Green Tokens minted successfully!");
-      setSubmitted(true);
       
       // Reset form after 3 seconds
       setTimeout(() => {
         setSubmitted(false);
+        setResponseMsg('');
         setFormData({
           numberOfTrees: '',
           location: '',
           treeTypes: [''],
           imageFile: null
         });
-      }, 3000);
+      }, 4000);
 
     } catch (error) {
-      alert(`❌ ${error.message}`);
+      console.error("Submission error:", error);
+      const errMsg = error.response?.data?.message || "Failed to submit";
+      alert(`❌ ${errMsg}`);
     } finally {
-      setIsMinting(false);
+      setLoading(false);
     }
   };
 
@@ -273,15 +216,15 @@ export default function PlantationForm() {
           <motion.button
             type="button"
             onClick={handleSubmit}
-            disabled={isMinting || submitted}
-            whileHover={{ scale: isMinting ? 1 : 1.02 }}
-            whileTap={{ scale: isMinting ? 1 : 0.98 }}
+            disabled={loading || submitted}
+            whileHover={{ scale: loading ? 1 : 1.02 }}
+            whileTap={{ scale: loading ? 1 : 0.98 }}
             className="w-full py-4 bg-gradient-to-r from-green-700 to-emerald-800 text-white rounded-xl font-semibold shadow-lg flex items-center justify-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed"
           >
-            {isMinting ? (
+            {loading ? (
               <>
                 <Loader2 className="w-5 h-5 animate-spin" />
-                Minting Tokens...
+                Processing...
               </>
             ) : submitted ? (
               <>
@@ -294,11 +237,13 @@ export default function PlantationForm() {
           </motion.button>
         </div>
 
-        <div className="mt-6 p-4 bg-green-50 rounded-xl">
-          <p className="text-sm text-green-900">
-            🌳 <strong>Token Reward:</strong> Earn 50 tokens for each successful submission. Native species earn bonus rewards!
-          </p>
-        </div>
+        {submitted && (
+          <div className="mt-6 p-4 bg-green-50 border border-green-200 rounded-xl">
+            <p className="text-sm text-green-800 font-medium text-center">
+              {responseMsg}
+            </p>
+          </div>
+        )}
       </motion.div>
     </div>
   );

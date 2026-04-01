@@ -1,9 +1,14 @@
+
 'use client';
 import { motion } from 'framer-motion';
 import { Car, Bike, Bus, CheckCircle, Loader2 } from 'lucide-react';
 import { useState } from 'react';
+import axios from 'axios';
+
+import { useAuth } from '@clerk/nextjs';
 
 export default function TransportForm() {
+  const { getToken } = useAuth();
   const [isEV, setIsEV] = useState(null);
   const [vehicleType, setVehicleType] = useState('');
   const [formData, setFormData] = useState({
@@ -13,74 +18,8 @@ export default function TransportForm() {
     vehicleNumber: ''
   });
   const [submitted, setSubmitted] = useState(false);
-  const [isMinting, setIsMinting] = useState(false);
-  const [account, setAccount] = useState(null);
-
-  // Connect wallet function
-  const connectWallet = async () => {
-    if (window.ethereum) {
-      try {
-        const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
-        setAccount(accounts[0]);
-        return accounts[0];
-      } catch (error) {
-        console.error("Error connecting wallet:", error);
-        return null;
-      }
-    }
-    return null;
-  };
-
-  const mintTokens = async (connectedAccount) => {
-    try {
-      console.log("Minting tokens to:", connectedAccount);
-      
-      // Import ethers dynamically
-      const { ethers } = await import('ethers');
-      
-      // You'll need to provide your contract ABI and address
-      const contractAddress = "YOUR_CONTRACT_ADDRESS";
-      const contractABI = [
-        "function mint(address to, uint256 amount) public"
-      ];
-
-      if (!window.ethereum) {
-        throw new Error("MetaMask not found");
-      }
-
-      const provider = new ethers.BrowserProvider(window.ethereum);
-      const signer = await provider.getSigner();
-      const contract = new ethers.Contract(contractAddress, contractABI, signer);
-
-      // Verify contract is deployed
-      const code = await provider.getCode(contractAddress);
-      if (code === '0x' || code === '0x0') {
-        throw new Error("Contract not deployed on current network. Please switch to the correct network.");
-      }
-
-      console.log("Minting 50 tokens...");
-      const tx = await contract.mint(connectedAccount, ethers.parseUnits("50", 18));
-      console.log("Transaction sent:", tx.hash);
-      
-      await tx.wait();
-      console.log("Transaction confirmed!");
-      
-      return true;
-    } catch (error) {
-      console.error("Error minting:", error);
-      
-      let errorMsg = "Failed to mint tokens";
-      if (error.message.includes("not deployed")) {
-        errorMsg = "Contract not deployed. Please check your network.";
-      } else if (error.code === "ACTION_REJECTED") {
-        errorMsg = "Transaction rejected by user";
-      } else if (error.message.includes("insufficient funds")) {
-        errorMsg = "Insufficient funds for gas";
-      }
-      
-      throw new Error(errorMsg);
-    }
-  };
+  const [loading, setLoading] = useState(false);
+  const [responseMsg, setResponseMsg] = useState('');
 
   const validateForm = () => {
     if (isEV === null) {
@@ -95,6 +34,11 @@ export default function TransportForm() {
 
     // For cycle and public transport, less validation needed
     if (['cycle', 'public-transport'].includes(vehicleType)) {
+      // Need distance for calculation
+      if(!formData.odometerReading) {
+         alert("⚠️ Please enter distance traveled");
+         return false;
+      }
       return true;
     }
 
@@ -119,41 +63,53 @@ export default function TransportForm() {
       return;
     }
 
-    setIsMinting(true);
+    setLoading(true);
 
     try {
-      // Connect wallet if not connected
-      let walletAccount = account;
-      if (!walletAccount) {
-        walletAccount = await connectWallet();
-        if (!walletAccount) {
-          alert("⚠️ Please connect your wallet first!");
-          setIsMinting(false);
-          return;
-        }
-      }
-
       // Prepare submit data
-      const submitData = {
-        isEV,
-        vehicleType,
-        ...formData,
-        odometerReading: ['cycle', 'public-transport'].includes(vehicleType) ? null : formData.odometerReading
+      // Backend expects: mode, distance, isEV
+      let mode = 'default';
+      if(vehicleType === 'cycle') mode = 'bicycle';
+      else if(vehicleType === 'public-transport') mode = 'public transport';
+      else if(vehicleType === '2-wheeler') mode = 'two wheeler';
+      else if(vehicleType === '4-wheeler') mode = 'four wheeler';
+
+      const payload = {
+        mode: mode,
+        distance: Number(formData.odometerReading), // Using odometer field as "Distance Traveled" for this form logic
+        isEV: isEV
       };
 
-      // Log transport data
-      console.log('Transport Data Submitted:', submitData);
+      console.log('Sending Transport Data:', payload);
 
-      // Mint tokens
-      await mintTokens(walletAccount);
-      
+      const token = await getToken();
+
+      // Call Backend API
+      const res = await axios.post("http://localhost:8000/api/v1/form/transport", payload, {
+        withCredentials: true,
+        headers: {
+           "Authorization": `Bearer ${token}`
+        }
+      });
+
+      console.log('Backend Response:', res.data);
+      const { tokensChange } = res.data.data;
+
       // Success!
-      alert("✅ Transport data submitted and 50 Green Tokens minted successfully!");
+      if(tokensChange > 0) {
+        setResponseMsg(`✅ Trip logged! You earned ${tokensChange} Green Points!`);
+      } else if (tokensChange < 0) {
+         setResponseMsg(`✅ Trip logged. ${Math.abs(tokensChange)} points deducted for carbon emissions.`);
+      } else {
+         setResponseMsg(`✅ Trip logged successfully.`);
+      }
+      
       setSubmitted(true);
       
       // Reset form after 3 seconds
       setTimeout(() => {
         setSubmitted(false);
+        setResponseMsg('');
         setIsEV(null);
         setVehicleType('');
         setFormData({
@@ -162,12 +118,14 @@ export default function TransportForm() {
           vehicleModel: '',
           vehicleNumber: ''
         });
-      }, 3000);
+      }, 4000);
 
     } catch (error) {
-      alert(`❌ ${error.message}`);
+       console.error("Submission error:", error);
+      const errMsg = error.response?.data?.message || error.message || "Failed to submit";
+      alert(`❌ ${errMsg}`);
     } finally {
-      setIsMinting(false);
+      setLoading(false);
     }
   };
 
@@ -270,7 +228,7 @@ export default function TransportForm() {
                 step="0.1"
                 value={formData.evCapacity}
                 onChange={(e) => setFormData({ ...formData, evCapacity: e.target.value })}
-                className="w-full px-4 py-3 border-2 border-blue-300 rounded-xl focus:outline-none focus:border-blue-700 transition-colors"
+                className="w-full px-4 py-3 border-2 border-blue-300 rounded-xl focus:outline-none focus:border-blue-700 transition-colors text-blue-900 placeholder:text-blue-400"
                 placeholder="e.g., 40.5"
               />
             </motion.div>
@@ -293,7 +251,7 @@ export default function TransportForm() {
                   required
                   value={formData.vehicleModel}
                   onChange={(e) => setFormData({ ...formData, vehicleModel: e.target.value })}
-                  className="w-full px-4 py-3 border-2 border-blue-300 rounded-xl focus:outline-none focus:border-blue-700 transition-colors"
+                  className="w-full px-4 py-3 border-2 border-blue-300 rounded-xl focus:outline-none focus:border-blue-700 transition-colors text-blue-900 placeholder:text-blue-400"
                   placeholder="e.g., Tesla Model 3, Honda Activa"
                 />
               </div>
@@ -307,14 +265,14 @@ export default function TransportForm() {
                   required
                   value={formData.vehicleNumber}
                   onChange={(e) => setFormData({ ...formData, vehicleNumber: e.target.value })}
-                  className="w-full px-4 py-3 border-2 border-blue-300 rounded-xl focus:outline-none focus:border-blue-700 transition-colors"
+                  className="w-full px-4 py-3 border-2 border-blue-300 rounded-xl focus:outline-none focus:border-blue-700 transition-colors text-blue-900 placeholder:text-blue-400"
                   placeholder="e.g., MH12AB1234"
                 />
               </div>
 
               <div>
                 <label className="block text-sm font-medium text-blue-900 mb-2">
-                  Odometer Reading (km) *
+                  Distance Traveled (km) *
                 </label>
                 <input
                   type="number"
@@ -322,61 +280,80 @@ export default function TransportForm() {
                   min="0"
                   value={formData.odometerReading}
                   onChange={(e) => setFormData({ ...formData, odometerReading: e.target.value })}
-                  className="w-full px-4 py-3 border-2 border-blue-300 rounded-xl focus:outline-none focus:border-blue-700 transition-colors"
-                  placeholder="Current odometer reading"
+                  className="w-full px-4 py-3 border-2 border-blue-300 rounded-xl focus:outline-none focus:border-blue-700 transition-colors text-blue-900 placeholder:text-blue-400"
+                  placeholder="Trip distance in km"
                 />
               </div>
             </motion.div>
           )}
 
-          {/* Public Transport/Cycle Info */}
+          {/* Public Transport/Cycle Info - Needs distance too */}
           {vehicleType && ['cycle', 'public-transport'].includes(vehicleType) && (
-            <motion.div
+             <motion.div
               initial={{ opacity: 0, height: 0 }}
               animate={{ opacity: 1, height: 'auto' }}
               transition={{ duration: 0.3 }}
-              className="p-4 bg-blue-50 rounded-xl"
+              className="space-y-4"
             >
-              <p className="text-sm text-blue-900">
-                🎉 Excellent choice! {vehicleType === 'cycle' ? 'Cycling' : 'Public transport'} is 
-                one of the most sustainable ways to travel. You'll earn bonus tokens!
-              </p>
+               <div>
+                <label className="block text-sm font-medium text-blue-900 mb-2">
+                  Distance Traveled (km) *
+                </label>
+                <input
+                  type="number"
+                  required
+                  min="0"
+                  value={formData.odometerReading}
+                  onChange={(e) => setFormData({ ...formData, odometerReading: e.target.value })}
+                  className="w-full px-4 py-3 border-2 border-blue-300 rounded-xl focus:outline-none focus:border-blue-700 transition-colors text-blue-900 placeholder:text-blue-400"
+                  placeholder="Trip distance in km"
+                />
+              </div>
+              <div className="p-4 bg-blue-50 rounded-xl">
+                <p className="text-sm text-blue-900">
+                  🎉 Excellent choice! {vehicleType === 'cycle' ? 'Cycling' : 'Public transport'} is 
+                  one of the most sustainable ways to travel. You'll earn bonus tokens!
+                </p>
+              </div>
             </motion.div>
           )}
 
           <motion.button
             type="button"
             onClick={handleSubmit}
-            disabled={!vehicleType || isMinting || submitted}
-            whileHover={{ scale: vehicleType && !isMinting ? 1.02 : 1 }}
-            whileTap={{ scale: vehicleType && !isMinting ? 0.98 : 1 }}
+            disabled={!vehicleType || loading || submitted}
+            whileHover={{ scale: vehicleType && !loading ? 1.02 : 1 }}
+            whileTap={{ scale: vehicleType && !loading ? 0.98 : 1 }}
             className={`w-full py-4 rounded-xl font-semibold shadow-lg flex items-center justify-center gap-2 transition-all ${
-              vehicleType && !isMinting && !submitted
+              vehicleType && !loading && !submitted
                 ? 'bg-gradient-to-r from-blue-700 to-cyan-800 text-white cursor-pointer'
                 : 'bg-gray-300 text-gray-500 cursor-not-allowed'
             }`}
           >
-            {isMinting ? (
+            {loading ? (
               <>
                 <Loader2 className="w-5 h-5 animate-spin" />
-                Minting Tokens...
+                Processing...
               </>
             ) : submitted ? (
               <>
                 <CheckCircle className="w-5 h-5" />
-                Submitted Successfully!
+                Submitted!
               </>
             ) : (
-              'Submit & Earn Tokens'
+              'Submit & Earn Points'
             )}
           </motion.button>
         </div>
 
-        <div className="mt-6 p-4 bg-blue-50 rounded-xl">
-          <p className="text-sm text-blue-900">
-            🚗 <strong>Token Reward:</strong> Earn 50 tokens! Higher rewards for EVs, cycles, and public transport!
-          </p>
-        </div>
+        {submitted && (
+          <div className="mt-6 p-4 bg-blue-50 border border-blue-200 rounded-xl">
+             <p className="text-sm text-blue-800 font-medium text-center">
+                {responseMsg}
+             </p>
+          </div>
+        )}
+
       </motion.div>
     </div>
   );

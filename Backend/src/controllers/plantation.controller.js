@@ -49,6 +49,20 @@ export const logPlanting = asyncHandler(async (req, res) => {
   const tokensEarned = numPlantCount * TOKENS_PER_PLANT;
 
   // 6. Update the Forestation document
+  // 6. Update the Forestation document
+  
+  // [Check] Cooldown to prevent fraud (12 hours)
+  const existingForestation = await Forestation.findOne({ userID: user._id });
+  if (existingForestation) {
+    const lastPlantTime = new Date(existingForestation.updatedAt).getTime();
+    const currentTime = Date.now();
+    const hoursDiff = (currentTime - lastPlantTime) / (1000 * 60 * 60);
+    
+    if (hoursDiff < 12) {
+      throw new ApiError(429, `You can only plant trees once every 12 hours. Try again later!`);
+    }
+  }
+
   const forestation = await Forestation.findOneAndUpdate(
     { userID: user._id }, // Find the user's summary doc
     {

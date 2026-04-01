@@ -12,14 +12,12 @@ import {
   Cell,
 } from "recharts";
 
-import { monthlyTokens, activityBreakdown } from "../data/dashboardData";
-
 const COLORS = ["#2E7D32", "#66BB6A", "#81C784", "#A5D6A7"];
 
-export default function GraphComponent() {
+export default function GraphComponent({ monthlyTokens = [], activityBreakdown = [] }) {
   const totalTokens = monthlyTokens.reduce((sum, m) => sum + m.tokens, 0);
-  const lastMonthTokens = monthlyTokens[monthlyTokens.length - 2].tokens;
-  const currentMonthTokens = monthlyTokens[monthlyTokens.length - 1].tokens;
+  const lastMonthTokens = monthlyTokens.length > 1 ? monthlyTokens[monthlyTokens.length - 2].tokens : 0;
+  const currentMonthTokens = monthlyTokens.length > 0 ? monthlyTokens[monthlyTokens.length - 1].tokens : 0;
 
   return (
     <div className="min-h-screen w-full bg-gradient-to-b from-[#A5D6A7] to-[#E8F5E9] p-8 mt-6 rounded-2xl shadow-2xl">
@@ -28,7 +26,7 @@ export default function GraphComponent() {
       </h1>
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 mb-10">
         <div className="card bg-white shadow-md p-5 rounded-2xl border-t-4 border-green-700">
-          <h2 className="text-gray-600">Total Tokens Earned</h2>
+          <h2 className="text-gray-600">Total Tokens Earned (6mo)</h2>
           <p className="text-3xl font-bold text-green-800 mt-2">{totalTokens}</p>
         </div>
         <div className="card bg-white shadow-md p-5 rounded-2xl border-t-4 border-emerald-600">

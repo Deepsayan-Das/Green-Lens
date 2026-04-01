@@ -1,16 +1,19 @@
-// import { Router } from "express";
-// import { getUserDashboard } from "../controllers/user.controller.js";
+import { Router } from "express";
+import { getUserDashboard, getLeaderboard } from "../controllers/user.controller.js";
 // import { updateUserProfile } from "../controllers/profile.controller.js"; 
-// import { authMiddleware } from "../middlewares/auth.middleware.js";
+import { authMiddleware } from "../middlewares/auth.middleware.js";
 
-// const router = Router();
+const router = Router();
 
-// router.use(authMiddleware);
+router.use(authMiddleware);
 
-// // Route to get all dashboard data
-// router.route("/dashboard").get(getUserDashboard);
+// Route to get all dashboard data
+router.route("/dashboard").get(getUserDashboard);
 
-// // Route for updating the profile
-// // router.route("/profile").patch(updateUserProfile);
+// Route for leaderboard
+router.route("/leaderboard").get(getLeaderboard);
 
-// export default router;
+// Route for updating the profile
+// router.route("/profile").patch(updateUserProfile);
+
+export default router;

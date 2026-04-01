@@ -1,9 +1,13 @@
+import os
 import pandas as pd
 import joblib
 import uvicorn
 from fastapi import FastAPI
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 from contextlib import asynccontextmanager
+
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+MODEL_PATH = os.path.join(BASE_DIR, "electricity_benchmark_model.pkl")
 
 # --- 1. Define Constants ---
 
@@ -32,8 +36,8 @@ class ElectricityData(BaseModel):
     monthly_unitsUsed_kwh: float
     monthly_solarUsed_kwh: float
 
-    class Config:
-        json_schema_extra = {
+    model_config = ConfigDict(
+        json_schema_extra={
             "example": {
                 "homeType": "Apartment",
                 "carpetArea_sqft": 900.0,
@@ -41,19 +45,21 @@ class ElectricityData(BaseModel):
                 "monthly_solarUsed_kwh": 0.0
             }
         }
+    )
 
 
 class TravelData(BaseModel):
     vehicle_type: str
     kmCovered: float  # Your Node.js backend calculates this
 
-    class Config:
-        json_schema_extra = {
+    model_config = ConfigDict(
+        json_schema_extra={
             "example": {
                 "vehicle_type": "Car",
                 "kmCovered": 250.0
             }
         }
+    )
 
 
 # --- 3. Create App State & Lifespan Event ---
@@ -65,7 +71,7 @@ async def lifespan(app: FastAPI):
     # Load the new ML model
     print("Loading *electricity benchmark* ML model...")
     # Make sure your new model file is named this:
-    app_state["electricity_model"] = joblib.load("electricity_benchmark_model.pkl")
+    app_state["electricity_model"] = joblib.load(MODEL_PATH)
     print("Model loaded successfully.")
     yield
     print("Clearing application state...")
@@ -147,4 +153,4 @@ def calculate_travel_footprint(data: TravelData):
 
 # --- 5. Main entry point to run the app ---
 if __name__ == "__main__":
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    uvicorn.run(app, host="0.0.0.0", port=8001)
